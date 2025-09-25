@@ -25,10 +25,10 @@ print(f"Short URL: {short_url}")
 
 # --- Step 1: Generate QR code for the shortened URL ---
 qr = qrcode.QRCode(
-    version=1,  # smaller version because URL is short
-    error_correction=qrcode.constants.ERROR_CORRECT_H,
+    version=None,  # let qrcode pick the smallest version automatically
+    error_correction=qrcode.constants.ERROR_CORRECT_M,  # lower error correction
     box_size=1,
-    border=4,
+    border=2,  # minimal quiet zone
 )
 qr.add_data(short_url)
 qr.make(fit=True)
@@ -45,9 +45,9 @@ matrix = qr.get_matrix()
 matrix = np.array(matrix, dtype=bool)
 
 rows, cols = matrix.shape
-module_size = 2.0   # mm per module
+module_size = 3.0   # larger module size for easier 3D printing
 height = 2.0        # extrusion height in mm
-radius = 0.3        # corner rounding for blocks
+radius = 0.3        # corner rounding for blocks (not applied in mesh, optional)
 
 meshes = []
 
