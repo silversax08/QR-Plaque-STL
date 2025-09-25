@@ -1,3 +1,4 @@
+import requests
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
@@ -5,14 +6,31 @@ from PIL import Image
 import numpy as np
 import trimesh
 
-# --- Step 1: Generate QR code ---
+# --- Step 0: Shorten the URL using is.gd ---
+def shorten_url_isgd(long_url):
+    api = "https://is.gd/create.php"
+    params = {
+        "format": "simple",  # return plain short URL
+        "url": long_url
+    }
+    response = requests.get(api, params=params)
+    if response.status_code == 200:
+        return response.text.strip()
+    else:
+        raise Exception(f"URL shortening failed: {response.status_code}")
+
+long_url = "https://venmo.com/Savannah-Hawkins-2?txn=pay&amount=0&note=Thanks!"
+short_url = shorten_url_isgd(long_url)
+print(f"Short URL: {short_url}")
+
+# --- Step 1: Generate QR code for the shortened URL ---
 qr = qrcode.QRCode(
-    version=1,
+    version=1,  # smaller version because URL is short
     error_correction=qrcode.constants.ERROR_CORRECT_H,
-    box_size=1,  # box_size is irrelevant here; we read the matrix
+    box_size=1,
     border=4,
 )
-qr.add_data("https://venmo.com/Savannah-Hawkins-2?txn=pay&amount=0&note=Thanks!")
+qr.add_data(short_url)
 qr.make(fit=True)
 
 # Preview (optional)
@@ -27,7 +45,7 @@ matrix = qr.get_matrix()
 matrix = np.array(matrix, dtype=bool)
 
 rows, cols = matrix.shape
-module_size = 2.0   # mm
+module_size = 2.0   # mm per module
 height = 2.0        # extrusion height in mm
 radius = 0.3        # corner rounding for blocks
 
@@ -37,15 +55,9 @@ meshes = []
 for r in range(rows):
     for c in range(cols):
         if matrix[r, c]:
-            # Center of this module
             x = c * module_size
-            y = (rows - r - 1) * module_size  # flip y-axis so QR is upright
-            # Create rounded cube (trimesh box with chamfer is simplest approximation)
-            # trimesh doesn't have a built-in rounded cube, so we approximate
-            block = trimesh.creation.box(
-                extents=[module_size, module_size, height]
-            )
-            # Move it into place
+            y = (rows - r - 1) * module_size  # flip y-axis
+            block = trimesh.creation.box(extents=[module_size, module_size, height])
             block.apply_translation([x + module_size/2, y + module_size/2, height/2])
             meshes.append(block)
 
